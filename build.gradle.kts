@@ -7,6 +7,7 @@ buildscript {
         maven("https://jitpack.io")
     }
     dependencies {
+        classpath("com.android.tools.build:gradle:8.2.2")
         classpath("com.github.recloudstream:gradle:-SNAPSHOT")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
     }
@@ -35,6 +36,6 @@ configure<CloudstreamExtension> {
 
 dependencies {
     val cloudstreamApiVersion = "pre-release"
-    implementation("com.github.recloudstream:cloudstream:$cloudstreamApiVersion")
-    implementation("org.jsoup:jsoup:1.17.2")
+    "implementation"("com.github.recloudstream:cloudstream:$cloudstreamApiVersion")
+    "implementation"("org.jsoup:jsoup:1.17.2")
 }
