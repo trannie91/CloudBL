@@ -25,11 +25,15 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
 
       - name: Build Cloudstream Plugin (.cs3)
         run: |
-          chmod +x ./gradlew || true
-          ./gradlew makePlugins --stacktrace
+          if [ ! -f ./gradlew ]; then
+            gradle wrapper --gradle-version 8.5
+          fi
+          gradle makePlugins --stacktrace || ./gradlew makePlugins --stacktrace
 
       - name: Deploy to Builds Branch
         uses: JamesIves/github-pages-deploy-action@v4
