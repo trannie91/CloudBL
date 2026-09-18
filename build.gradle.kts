@@ -7,7 +7,7 @@ buildscript {
         maven("https://jitpack.io")
     }
     dependencies {
-        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
+        classpath("com.github.recloudstream.gradle:gradle:master-SNAPSHOT")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
     }
 }
@@ -28,8 +28,7 @@ configure<com.android.build.gradle.LibraryExtension> {
 }
 
 configure<CloudstreamExtension> {
-    // Tự động nhận diện repo trên GitHub Actions
-    setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/your-github-username/blvietsub-cloudstream")
+    setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/trannie91/CloudBL")
     authors = listOf("BLVietsub")
     description = "Xem phim Đam Mỹ BLVietsub mượt mà trên Cloudstream Android TV & Mobile"
 }
