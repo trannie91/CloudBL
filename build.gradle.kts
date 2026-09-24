@@ -34,7 +34,6 @@ subprojects {
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
     cloudstream {
-        // Tự động nhận URL repository từ GitHub Actions hoặc fallback mặc định
         setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/ngoctrang1091/CloudBL")
     }
 
