@@ -1,4 +1,5 @@
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
+import com.android.build.gradle.BaseExtension
 
 buildscript {
     repositories {
@@ -24,18 +25,21 @@ allprojects {
 fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) =
     extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
 
+fun Project.android(configuration: BaseExtension.() -> Unit) =
+    extensions.getByName<BaseExtension>("android").configuration()
+
 subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
     cloudstream {
-        // Xuất file plugin .cs3 và repository JSON vào thư mục build
-        setRepo(rootProject.file("build"))
+        // Tự động nhận URL repository từ GitHub Actions hoặc fallback mặc định
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/ngoctrang1091/CloudBL")
     }
 
     android {
-        compileSdk = 34
+        compileSdkVersion(34)
 
         defaultConfig {
             minSdk = 21
