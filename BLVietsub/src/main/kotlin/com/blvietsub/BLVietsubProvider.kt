@@ -48,10 +48,12 @@ class BLVietsubProvider : MainAPI() {
         }
 
         return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = items,
-                isHorizontalImages = false
+            listOf(
+                HomePageList(
+                    name = request.name,
+                    list = items,
+                    isHorizontalImages = false
+                )
             ),
             hasNext = items.isNotEmpty()
         )
@@ -177,6 +179,6 @@ class BLVietsubProvider : MainAPI() {
         }
 
         // Tự động sử dụng các Extractor khác đã tích hợp sẵn trong Cloudstream
-        return loadExtractor(data, subtitleCallback, callback)
+        return loadExtractor(data, "$mainUrl/", subtitleCallback, callback)
     }
 }
