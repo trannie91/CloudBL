@@ -34,8 +34,12 @@ jobs:
 
       - name: Build Cloudstream Plugin and Repository
         run: |
-          chmod +x ./gradlew || true
-          ./gradlew make makePluginsJson --stacktrace || gradle make makePluginsJson --stacktrace
+          if [ -f "./gradlew" ] && [ -s "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew make makePluginsJson --stacktrace || gradle make makePluginsJson --stacktrace
+          else
+            gradle make makePluginsJson --stacktrace
+          fi
 
       - name: Deploy plugins.json and .cs3 to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
