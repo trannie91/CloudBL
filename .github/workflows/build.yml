@@ -32,19 +32,27 @@ jobs:
         with:
           gradle-version: '8.5'
 
-      - name: Pre-fetch and warm JitPack cache
+      - name: Warm up JitPack Cache
         run: |
-          echo "Warming up JitPack artifacts for recloudstream..."
-          curl -s -m 15 https://jitpack.io/api/builds/com.github.recloudstream/gradle > /dev/null 2>&1 || true
-          curl -s -m 15 https://jitpack.io/api/builds/com.github.recloudstream/cloudstream > /dev/null 2>&1 || true
+          echo "Triggering JitPack builds..."
+          curl -s -m 20 https://jitpack.io/api/builds/com.github.recloudstream/gradle > /dev/null 2>&1 || true
+          curl -s -m 20 https://jitpack.io/api/builds/com.github.recloudstream/cloudstream > /dev/null 2>&1 || true
 
       - name: Build Cloudstream Plugin and Repository
         run: |
           if [ -f "./gradlew" ] && [ -s "./gradlew" ]; then
             chmod +x ./gradlew
-            ./gradlew make makePluginsJson --stacktrace || (echo "Retrying Gradle build..." && sleep 5 && ./gradlew make makePluginsJson --stacktrace)
+            ./gradlew make makePluginsJson --refresh-dependencies --no-daemon --stacktrace || (
+              echo "Retrying after waiting for JitPack build to finish..."
+              sleep 15
+              ./gradlew make makePluginsJson --refresh-dependencies --no-daemon --stacktrace
+            )
           else
-            gradle make makePluginsJson --stacktrace || (echo "Retrying Gradle build..." && sleep 5 && gradle make makePluginsJson --stacktrace)
+            gradle make makePluginsJson --refresh-dependencies --no-daemon --stacktrace || (
+              echo "Retrying after waiting for JitPack build to finish..."
+              sleep 15
+              gradle make makePluginsJson --refresh-dependencies --no-daemon --stacktrace
+            )
           fi
 
       - name: Deploy plugins.json and .cs3 to GitHub Pages
