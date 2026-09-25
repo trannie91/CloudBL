@@ -32,13 +32,19 @@ jobs:
         with:
           gradle-version: '8.5'
 
+      - name: Pre-fetch and warm JitPack cache
+        run: |
+          echo "Warming up JitPack artifacts for recloudstream..."
+          curl -s -m 15 https://jitpack.io/api/builds/com.github.recloudstream/gradle > /dev/null 2>&1 || true
+          curl -s -m 15 https://jitpack.io/api/builds/com.github.recloudstream/cloudstream > /dev/null 2>&1 || true
+
       - name: Build Cloudstream Plugin and Repository
         run: |
           if [ -f "./gradlew" ] && [ -s "./gradlew" ]; then
             chmod +x ./gradlew
-            ./gradlew make makePluginsJson --stacktrace || gradle make makePluginsJson --stacktrace
+            ./gradlew make makePluginsJson --stacktrace || (echo "Retrying Gradle build..." && sleep 5 && ./gradlew make makePluginsJson --stacktrace)
           else
-            gradle make makePluginsJson --stacktrace
+            gradle make makePluginsJson --stacktrace || (echo "Retrying Gradle build..." && sleep 5 && gradle make makePluginsJson --stacktrace)
           fi
 
       - name: Deploy plugins.json and .cs3 to GitHub Pages
