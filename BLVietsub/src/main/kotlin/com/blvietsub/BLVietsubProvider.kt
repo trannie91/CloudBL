@@ -120,7 +120,7 @@ class BLVietsubProvider : MainAPI() {
         val year = Regex("""\((\d{4})\)""").find(title)?.groupValues?.get(1)?.toIntOrNull()
         val tags = doc.select("article a[href*=/category/]").map { it.text().trim() }
 
-        // Bóc tách danh sách tập phim từ data-server-url
+        // Bóc tách danh sách tập phim bằng helper method newEpisode chuẩn Cloudstream
         val episodes = mutableListOf<Episode>()
         val serverButtons = doc.select("[data-server-url]")
 
@@ -128,14 +128,13 @@ class BLVietsubProvider : MainAPI() {
             serverButtons.forEachIndexed { index, btn ->
                 val serverUrl = btn.attr("data-server-url").trim()
                 val label = btn.attr("data-server-label").ifEmpty { btn.text().trim() }
-                val epNum = Regex("""\d+""").find(label)?.value?.toIntOrNull() ?: (index + 1)
+                val epNum = Regex("""d+""").find(label)?.value?.toIntOrNull() ?: (index + 1)
                 
                 episodes.add(
-                    Episode(
-                        data = serverUrl,
-                        name = label.ifEmpty { "Tập $epNum" },
-                        episode = epNum
-                    )
+                    newEpisode(serverUrl) {
+                        this.name = label.ifEmpty { "Tập $epNum" }
+                        this.episode = epNum
+                    }
                 )
             }
         } else {
@@ -145,11 +144,10 @@ class BLVietsubProvider : MainAPI() {
                 val src = iframe.attr("src").trim()
                 if (src.isNotEmpty()) {
                     episodes.add(
-                        Episode(
-                            data = src,
-                            name = "Tập ${index + 1}",
-                            episode = index + 1
-                        )
+                        newEpisode(src) {
+                            this.name = "Tập ${index + 1}"
+                            this.episode = index + 1
+                        }
                     )
                 }
             }
