@@ -4,8 +4,10 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getAndUnpack
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class SSPlayExtractor : ExtractorApi() {
     override val name = "SSPlay"
@@ -33,14 +35,15 @@ class SSPlayExtractor : ExtractorApi() {
         if (directSuMatch != null) {
             val streamUrl = if (directSuMatch.startsWith("http")) directSuMatch else "https://ssplay.net$directSuMatch"
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     source = name,
                     name = "$name - 1080p FHD",
                     url = streamUrl,
-                    referer = "https://ssplay.net/",
-                    quality = Qualities.P1080.value,
-                    isM3u8 = true
-                )
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "https://ssplay.net/"
+                    this.quality = Qualities.P1080.value
+                }
             )
             return
         }
@@ -49,14 +52,15 @@ class SSPlayExtractor : ExtractorApi() {
         val m3u8Match = Regex("""https?://[^\s"']+\.m3u8[^\s"']*""").find(response)?.value
         if (m3u8Match != null) {
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     source = name,
                     name = "$name - 1080p FHD",
                     url = m3u8Match,
-                    referer = "https://ssplay.net/",
-                    quality = Qualities.P1080.value,
-                    isM3u8 = true
-                )
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "https://ssplay.net/"
+                    this.quality = Qualities.P1080.value
+                }
             )
             return
         }
@@ -71,14 +75,15 @@ class SSPlayExtractor : ExtractorApi() {
                 if (suMatch != null) {
                     val finalUrl = if (suMatch.startsWith("http")) suMatch else "https://ssplay.net$suMatch"
                     callback.invoke(
-                        ExtractorLink(
+                        newExtractorLink(
                             source = name,
                             name = "$name - 1080p FHD",
                             url = finalUrl,
-                            referer = "https://ssplay.net/",
-                            quality = Qualities.P1080.value,
-                            isM3u8 = true
-                        )
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = "https://ssplay.net/"
+                            this.quality = Qualities.P1080.value
+                        }
                     )
                     return
                 }
@@ -87,14 +92,15 @@ class SSPlayExtractor : ExtractorApi() {
                 if (fileMatch != null && (fileMatch.contains(".m3u8") || fileMatch.contains("/SU/"))) {
                     val finalUrl = if (fileMatch.startsWith("http")) fileMatch else "https://ssplay.net$fileMatch"
                     callback.invoke(
-                        ExtractorLink(
+                        newExtractorLink(
                             source = name,
                             name = "$name - 1080p FHD",
                             url = finalUrl,
-                            referer = "https://ssplay.net/",
-                            quality = Qualities.P1080.value,
-                            isM3u8 = true
-                        )
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = "https://ssplay.net/"
+                            this.quality = Qualities.P1080.value
+                        }
                     )
                 }
             } catch (e: Exception) {
