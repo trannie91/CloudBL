@@ -3,8 +3,8 @@ android {
 }
 
 dependencies {
-    // Thư viện Cloudstream core chính thức từ recloudstream
-    compileOnly("com.github.recloudstream.cloudstream:library:-SNAPSHOT")
+    val cloudstreamApiVersion = "master-SNAPSHOT"
+    compileOnly("com.github.recloudstream.cloudstream:library:$cloudstreamApiVersion")
     compileOnly("org.jsoup:jsoup:1.17.2")
     compileOnly("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
 }
