@@ -3,9 +3,9 @@ android {
 }
 
 dependencies {
-    // Thư viện Cloudstream core và plugin từ recloudstream
+    // Thư viện Cloudstream core & plugin API chuẩn
     val cloudstreamApiVersion = "-SNAPSHOT"
-    compileOnly("com.github.recloudstream:cloudstream:$cloudstreamApiVersion")
+    compileOnly("com.lagradost:cloudstream3:pre-release")
     compileOnly("com.github.recloudstream.cloudstream:library:$cloudstreamApiVersion")
     compileOnly("com.github.Blatzar:NiceHttp:0.4.11")
     compileOnly("com.squareup.okhttp3:okhttp:4.12.0")
