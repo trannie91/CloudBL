@@ -55,8 +55,25 @@ jobs:
             )
           fi
 
+      - name: Collect all .cs3 plugins and metadata to build folder
+        run: |
+          mkdir -p ./build
+          # Thu thập tất cả file .cs3 được tạo ra vào ./build
+          find . -type f -name "*.cs3" -not -path "*/.gradle/*" -exec cp -vf {} ./build/ ;
+          # Đảm bảo file plugins.json nằm trong ./build
+          find . -type f -name "plugins.json" -not -path "./build/plugins.json" -not -path "*/.gradle/*" -exec cp -vf {} ./build/ ;
+          echo "--- Danh sách file trong ./build sẵn sàng xuất bản ---"
+          ls -lah ./build
+
+      - name: Upload Artifacts (Cho phép tải trực tiếp file .cs3 từ GitHub Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cloudstream-BLVietsub-Extension
+          path: ./build/
+          if-no-files-found: warn
+
       - name: Deploy plugins.json and .cs3 to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build
