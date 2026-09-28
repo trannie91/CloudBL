@@ -58,11 +58,10 @@ jobs:
       - name: Collect all .cs3 plugins and metadata to build folder
         run: |
           mkdir -p ./build
-          # Thu thập tất cả file .cs3 được tạo ra vào ./build
-          find . -type f -name "*.cs3" -not -path "*/.gradle/*" -exec cp -vf {} ./build/ ;
-          # Đảm bảo file plugins.json nằm trong ./build
-          find . -type f -name "plugins.json" -not -path "./build/plugins.json" -not -path "*/.gradle/*" -exec cp -vf {} ./build/ ;
-          echo "--- Danh sách file trong ./build sẵn sàng xuất bản ---"
+          # Copy tat ca file .cs3 va plugins.json vao ./build bang lenh GNU cp an toan
+          find . -maxdepth 4 -name "*.cs3" -exec cp -t ./build/ {} + 2>/dev/null || true
+          find . -maxdepth 4 -name "plugins.json" -exec cp -t ./build/ {} + 2>/dev/null || true
+          echo "=== Danh sach file trong ./build chuan bi dong goi va xuat ban ==="
           ls -lah ./build
 
       - name: Upload Artifacts (Cho phép tải trực tiếp file .cs3 từ GitHub Actions)
