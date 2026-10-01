@@ -32,6 +32,50 @@ class BLVietsubProvider : MainAPI() {
 
     private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
+    private fun extractPoster(element: Element): String {
+        val img = element.selectFirst("img")
+        var poster = ""
+
+        if (img != null) {
+            val candidates = listOf(
+                img.attr("data-src"),
+                img.attr("data-lazy-src"),
+                img.attr("data-original"),
+                img.attr("data-srcset"),
+                img.attr("srcset"),
+                img.attr("src")
+            )
+
+            for (cand in candidates) {
+                val trimmed = cand.trim()
+                if (trimmed.isNotEmpty() && !trimmed.startsWith("data:image") && !trimmed.contains("blank.gif") && !trimmed.contains("placeholder")) {
+                    poster = if (trimmed.contains(",")) {
+                        trimmed.split(",").lastOrNull()?.trim()?.split(" ")?.firstOrNull() ?: ""
+                    } else if (trimmed.contains(" ")) {
+                        trimmed.split(" ").firstOrNull() ?: ""
+                    } else {
+                        trimmed
+                    }
+                    if (poster.isNotEmpty() && !poster.startsWith("data:image")) break
+                }
+            }
+        }
+
+        if (poster.isEmpty() || poster.startsWith("data:image")) {
+            val styleEl = element.selectFirst("[style*='background-image'], [data-bg], [data-background]")
+            val bgStyle = styleEl?.attr("style") ?: ""
+            val bgMatch = Regex("""url\(['"]?(.*?)['"]?\)""").find(bgStyle)?.groupValues?.get(1)
+            if (!bgMatch.isNullOrEmpty()) {
+                poster = bgMatch
+            } else {
+                poster = styleEl?.attr("data-bg")?.ifEmpty { styleEl.attr("data-background") } ?: ""
+            }
+        }
+
+        if (poster.isEmpty()) return ""
+        return fixUrl(poster)
+    }
+
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
@@ -76,18 +120,7 @@ class BLVietsubProvider : MainAPI() {
         val title = element.selectFirst("h2, h3, h4, .entry-title, .title, .film-name")?.text()?.trim() 
             ?: link.attr("title").ifEmpty { slug.replace("-", " ") }
             
-        var poster = element.selectFirst("img")?.let { img ->
-            img.attr("data-src").ifEmpty {
-                img.attr("data-lazy-src").ifEmpty {
-                    img.attr("src")
-                }
-            }
-        } ?: ""
-        
-        // Lay anh goc chat luong cao
-        if (poster.contains(Regex("""-\d+x\d+\."""))) {
-            poster = poster.replace(Regex("""-\d+x\d+\."""), ".")
-        }
+        val poster = extractPoster(element)
 
         return newTvSeriesSearchResponse(title, href, TvType.AsianDrama) {
             this.posterUrl = poster
