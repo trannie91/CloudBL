@@ -1,0 +1,16 @@
+[
+    {
+        "fileHash": "sha256-98d63b78f2721cff00e2e13251f5f8e4cbaa9e6d12aae7aad6650485807e4d01",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/trannie91/CloudBL",
+        "fileSize": 19979,
+        "status": 3,
+        "authors": [
+            
+        ],
+        "version": -1,
+        "internalName": "BLVietsub",
+        "url": "https://raw.githubusercontent.com/trannie91/CloudBL/builds/BLVietsub.cs3",
+        "name": "BLVietsub"
+    }
+]
