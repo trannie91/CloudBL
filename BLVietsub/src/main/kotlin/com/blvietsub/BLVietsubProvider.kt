@@ -317,6 +317,21 @@ class BLVietsubProvider : MainAPI() {
     ): Boolean {
         var hasLinks = false
 
+        // Bo loc chat luong cao: Loai bo triet de moi link chat luong thap (240p, 360p, 480p)
+        val highQualityCallback: (ExtractorLink) -> Unit = { link ->
+            val isLowQuality = (link.quality in 1 until Qualities.P720.value) ||
+                               link.name.contains("240p", ignoreCase = true) ||
+                               link.name.contains("360p", ignoreCase = true) ||
+                               link.name.contains("380p", ignoreCase = true) ||
+                               link.name.contains("480p", ignoreCase = true) ||
+                               link.name.contains("Low", ignoreCase = true)
+
+            if (!isLowQuality) {
+                hasLinks = true
+                callback.invoke(link)
+            }
+        }
+
         if (data.startsWith("SS_DL_COMBO::")) {
             val payload = data.removePrefix("SS_DL_COMBO::")
             val ssMatch = Regex("""ss=(.*?)(?:\|\||$)""").find(payload)?.groupValues?.get(1)?.trim() ?: ""
@@ -326,18 +341,14 @@ class BLVietsubProvider : MainAPI() {
             if (ssMatch.isNotEmpty()) {
                 try {
                     val ssExtractor = SSPlayExtractor()
-                    ssExtractor.getUrl(ssMatch, "$mainUrl/", subtitleCallback) { link ->
-                        hasLinks = true
-                        callback.invoke(link)
-                    }
+                    ssExtractor.getUrl(ssMatch, "$mainUrl/", subtitleCallback, highQualityCallback)
                 } catch (_: Exception) {}
             }
 
-            // 2. Du phong so 2: Dailymotion
+            // 2. Du phong so 2: Dailymotion chat luong cao
             if (dlMatch.isNotEmpty()) {
                 try {
-                    val dlSuccess = loadExtractor(dlMatch, "$mainUrl/", subtitleCallback, callback)
-                    if (dlSuccess) hasLinks = true
+                    loadExtractor(dlMatch, "$mainUrl/", subtitleCallback, highQualityCallback)
                 } catch (_: Exception) {}
             }
 
@@ -346,10 +357,10 @@ class BLVietsubProvider : MainAPI() {
 
         if (data.contains("ssplay.net") || data.contains("/ss/")) {
             val extractor = SSPlayExtractor()
-            extractor.getUrl(data, "$mainUrl/", subtitleCallback, callback)
+            extractor.getUrl(data, "$mainUrl/", subtitleCallback, highQualityCallback)
             return true
         }
 
-        return loadExtractor(data, "$mainUrl/", subtitleCallback, callback)
+        return loadExtractor(data, "$mainUrl/", subtitleCallback, highQualityCallback)
     }
 }
