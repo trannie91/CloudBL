@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class SSPlayExtractor : ExtractorApi() {
@@ -19,69 +20,92 @@ class SSPlayExtractor : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val videoId = Regex("""/v/([a-zA-Z0-9]+)""").find(url)?.groupValues?.get(1)
-            ?: Regex("""([a-zA-Z0-9]+)\.html""").find(url)?.groupValues?.get(1)
-
+        val ref = referer ?: "https://blvietsub.com/"
         val headers = mapOf(
-            "Referer" to (referer ?: "https://blvietsub.com/"),
-            "Origin" to "https://blvietsub.com",
+            "Referer" to ref,
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
 
-        try {
-            val response = app.get(url, headers = headers).text
+        val response = app.get(url, headers = headers).text
 
-            // 1. Trich xuat chinh xac theo co che may chu SSPlay: html|{id}|{tag}|...|SU
-            if (videoId != null) {
-                val marker = "html|$videoId|"
-                val pos = response.indexOf(marker)
-                if (pos != -1) {
-                    val tag = response.substring(pos + marker.length).substringBefore("|").trim()
-                    if (tag.isNotEmpty()) {
-                        val streamUrl = "https://ssplay.net/SU/$tag/$videoId.html"
+        // 1. Tìm đường dẫn /SU/ trực tiếp trong HTML
+        val directSuMatch = Regex("""["'](/SU/[^"']+)["']""").find(response)?.groupValues?.get(1)
+            ?: Regex("""/SU/[a-zA-Z0-9_\-./]+""").find(response)?.value
+
+        if (directSuMatch != null) {
+            val streamUrl = if (directSuMatch.startsWith("http")) directSuMatch else "https://ssplay.net$directSuMatch"
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = "$name - 1080p FHD",
+                    url = streamUrl,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "https://ssplay.net/"
+                    this.quality = Qualities.P1080.value
+                }
+            )
+            return
+        }
+
+        // 2. Tìm link .m3u8 trực tiếp
+        val m3u8Match = Regex("""https?://[^\s"']+\.m3u8[^\s"']*""").find(response)?.value
+        if (m3u8Match != null) {
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = "$name - 1080p FHD",
+                    url = m3u8Match,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "https://ssplay.net/"
+                    this.quality = Qualities.P1080.value
+                }
+            )
+            return
+        }
+
+        // 3. Giải mã Dean Edwards Packer nếu trang bị obfuscate
+        if (response.contains("eval(function(p,a,c,k,e,d)")) {
+            try {
+                val unpacked = getAndUnpack(response)
+                val suMatch = Regex("""["'](/SU/[^"']+)["']""").find(unpacked)?.groupValues?.get(1)
+                    ?: Regex("""/SU/[a-zA-Z0-9_\-./]+""").find(unpacked)?.value
+
+                if (suMatch != null) {
+                    val finalUrl = if (suMatch.startsWith("http")) suMatch else "https://ssplay.net$suMatch"
                     callback.invoke(
                         newExtractorLink(
                             source = name,
                             name = "$name - 1080p FHD",
-                            url = streamUrl,
+                            url = finalUrl,
                             type = ExtractorLinkType.M3U8
                         ) {
                             this.referer = "https://ssplay.net/"
-                            this.headers = mapOf(
-                                "Referer" to "https://ssplay.net/",
-                                "Origin" to "https://ssplay.net",
-                                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                            )
                             this.quality = Qualities.P1080.value
                         }
                     )
                     return
                 }
-            }
 
-            // 2. Fallback tim /SU/ truc tiep
-            val directSuMatch = Regex("""["'](/SU/[^"']+)["']""").find(response)?.groupValues?.get(1)
-                ?: Regex("""/SU/[a-zA-Z0-9_\-./]+""").find(response)?.value
-
-            if (directSuMatch != null) {
-                val streamUrl = if (directSuMatch.startsWith("http")) directSuMatch else "https://ssplay.net$directSuMatch"
-                callback.invoke(
-                    newExtractorLink(
-                        source = name,
-                        name = "$name - 1080p FHD",
-                        url = streamUrl,
-                        type = ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "https://ssplay.net/"
-                        this.headers = mapOf(
-                            "Referer" to "https://ssplay.net/",
-                            "Origin" to "https://ssplay.net",
-                            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                        )
-                        this.quality = Qualities.P1080.value
-                    }
-                )
+                val fileMatch = Regex("""["']file["']\s*:\s*["']([^"']+)["']""").find(unpacked)?.groupValues?.get(1)
+                if (fileMatch != null && (fileMatch.contains(".m3u8") || fileMatch.contains("/SU/"))) {
+                    val finalUrl = if (fileMatch.startsWith("http")) fileMatch else "https://ssplay.net$fileMatch"
+                    callback.invoke(
+                        newExtractorLink(
+                            source = name,
+                            name = "$name - 1080p FHD",
+                            url = finalUrl,
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = "https://ssplay.net/"
+                            this.quality = Qualities.P1080.value
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                // Ignore unpacking errors
             }
-        } catch (e: Exception) {}
+        }
     }
 }
