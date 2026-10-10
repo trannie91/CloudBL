@@ -281,7 +281,7 @@ class BLVietsubProvider : MainAPI() {
                     return true
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {}
         return false
     }
 
@@ -307,7 +307,7 @@ class BLVietsubProvider : MainAPI() {
                         hasLinks = true
                         callback.invoke(link)
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {}
             }
 
             // 2. Nguồn Dailymotion 1080p FHD (Dự phòng song hành)
@@ -323,7 +323,7 @@ class BLVietsubProvider : MainAPI() {
                             callback.invoke(link)
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {}
             }
 
             return hasLinks
