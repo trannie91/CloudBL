@@ -258,21 +258,32 @@ class BLVietsubProvider : MainAPI() {
                 "Referer" to "https://www.dailymotion.com/"
             )).text
 
-            val m3u8Match = Regex("""""auto":\s*\[\s*\{\s*"type":\s*"[^"]*",\s*"url":\s*"([^"]+)""""").find(responseText)?.groupValues?.get(1)
-            if (!m3u8Match.isNullOrEmpty()) {
-                val streamUrl = m3u8Match.replace("\/", "/")
-                callback.invoke(
-                    newExtractorLink(
-                        source = "Dailymotion",
-                        name = "Dailymotion - 1080p FHD",
-                        url = streamUrl,
-                        type = ExtractorLinkType.M3U8
-                    ) {
-                        this.referer = "https://www.dailymotion.com/"
-                        this.quality = Qualities.P1080.value
+            val autoIndex = responseText.indexOf(""qualities":")
+            if (autoIndex != -1) {
+                val sub = responseText.substring(autoIndex)
+                val urlKey = ""url":""
+                val urlStart = sub.indexOf(urlKey)
+                if (urlStart != -1) {
+                    val firstQuote = urlStart + urlKey.length
+                    val secondQuote = sub.indexOf('"', firstQuote)
+                    if (secondQuote != -1) {
+                        val rawUrl = sub.substring(firstQuote, secondQuote)
+                        val streamUrl = rawUrl.replace("\", "")
+
+                        callback.invoke(
+                            newExtractorLink(
+                                source = "Dailymotion",
+                                name = "Dailymotion - 1080p FHD",
+                                url = streamUrl,
+                                type = ExtractorLinkType.M3U8
+                            ) {
+                                this.referer = "https://www.dailymotion.com/"
+                                this.quality = Qualities.P1080.value
+                            }
+                        )
+                        return true
                     }
-                )
-                return true
+                }
             }
         } catch (_: Exception) {}
         return false
