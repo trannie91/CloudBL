@@ -169,12 +169,11 @@ class BLVietsubProvider : MainAPI() {
         val year = Regex("""\((\d{4})\)""").find(title)?.groupValues?.get(1)?.toIntOrNull()
         val tags = doc.select("article a[href*=/category/], .film-info a[href*=/category/]").map { it.text().trim() }
 
-        // Bóc tách danh sách tập phim - ƯU TIÊN VÀ CHỈ LỌC DUY NHẤT SERVER DL
+        // Bóc tách danh sách tập phim - LỰA CHỌN B: ƯU TIÊN SERVER SS (1080p FHD) + DỰ PHÒNG SERVER DL
         val episodes = mutableListOf<Episode>()
         val allServerButtons = doc.select("[data-server-url], .server-item button, .server-item a, .list-server a, .btn-episode, [data-server]")
 
-        // Lọc danh sách riêng cho SERVER DL
-        val dlButtons = allServerButtons.filter { btn ->
+        fun isServerSS(btn: Element): Boolean {
             val text = btn.text()
             val serverName = btn.attr("data-server-name")
             val serverLabel = btn.attr("data-server-label")
@@ -183,63 +182,119 @@ class BLVietsubProvider : MainAPI() {
             val parentText = btn.parent()?.text() ?: ""
             val grandParentText = btn.parent()?.parent()?.text() ?: ""
 
-            serverName.equals("DL", ignoreCase = true) ||
-            serverLabel.contains("DL", ignoreCase = true) ||
-            dataServer.equals("DL", ignoreCase = true) ||
-            dataServer.contains("DL", ignoreCase = true) ||
-            text.contains("DL", ignoreCase = true) ||
-            parentText.contains("Server DL", ignoreCase = true) ||
-            grandParentText.contains("Server DL", ignoreCase = true) ||
-            dataUrl.contains("/dl/", ignoreCase = true)
+            return serverName.equals("SS", ignoreCase = true) ||
+                   serverLabel.contains("SS", ignoreCase = true) ||
+                   dataServer.equals("SS", ignoreCase = true) ||
+                   dataServer.contains("SS", ignoreCase = true) ||
+                   text.contains("SS", ignoreCase = true) ||
+                   parentText.contains("Server SS", ignoreCase = true) ||
+                   grandParentText.contains("Server SS", ignoreCase = true) ||
+                   dataUrl.contains("ssplay", ignoreCase = true) ||
+                   dataUrl.contains("/ss/", ignoreCase = true)
         }
 
-        val targetButtons = if (dlButtons.isNotEmpty()) {
-            dlButtons
-        } else {
-            val nonSSandHX = allServerButtons.filter { btn ->
-                val combined = "${btn.text()} ${btn.attr("data-server-name")} ${btn.attr("data-server-label")} ${btn.attr("data-server")}"
-                !combined.contains("SS", ignoreCase = true) && !combined.contains("HX", ignoreCase = true)
-            }
-            if (nonSSandHX.isNotEmpty()) nonSSandHX else allServerButtons
+        fun isServerDL(btn: Element): Boolean {
+            val text = btn.text()
+            val serverName = btn.attr("data-server-name")
+            val serverLabel = btn.attr("data-server-label")
+            val dataServer = btn.attr("data-server")
+            val dataUrl = btn.attr("data-server-url")
+            val parentText = btn.parent()?.text() ?: ""
+            val grandParentText = btn.parent()?.parent()?.text() ?: ""
+
+            return serverName.equals("DL", ignoreCase = true) ||
+                   serverLabel.contains("DL", ignoreCase = true) ||
+                   dataServer.equals("DL", ignoreCase = true) ||
+                   dataServer.contains("DL", ignoreCase = true) ||
+                   text.contains("DL", ignoreCase = true) ||
+                   parentText.contains("Server DL", ignoreCase = true) ||
+                   grandParentText.contains("Server DL", ignoreCase = true) ||
+                   dataUrl.contains("dailymotion", ignoreCase = true) ||
+                   dataUrl.contains("/dl/", ignoreCase = true)
         }
 
-        if (targetButtons.isNotEmpty()) {
-            targetButtons.forEachIndexed { index, btn ->
-                val serverUrl = btn.attr("data-server-url").ifEmpty {
-                    btn.attr("data-url").ifEmpty {
-                        btn.attr("href")
-                    }
-                }.trim()
+        fun getButtonUrl(btn: Element): String {
+            return btn.attr("data-server-url").ifEmpty {
+                btn.attr("data-url").ifEmpty {
+                    btn.attr("href")
+                }
+            }.trim()
+        }
 
-                if (serverUrl.isNotEmpty() && !serverUrl.startsWith("#") && !serverUrl.startsWith("javascript")) {
-                    val rawLabel = btn.attr("data-server-label").ifEmpty { btn.text().trim() }
-                    val epNum = Regex("""\d+""").find(rawLabel)?.value?.toIntOrNull() ?: (index + 1)
-                    val cleanName = if (rawLabel.contains(Regex("""(?i)Tập\s*\d+"""))) {
-                        Regex("""(?i)Tập\s*\d+""").find(rawLabel)?.value ?: "Tập $epNum"
-                    } else {
-                        "Tập $epNum"
-                    }
+        fun getEpNumber(btn: Element, index: Int): Int {
+            val rawLabel = btn.attr("data-server-label").ifEmpty { btn.text().trim() }
+            return Regex("""\d+""").find(rawLabel)?.value?.toIntOrNull() ?: (index + 1)
+        }
 
-                    episodes.add(
-                        newEpisode(serverUrl) {
-                            this.name = cleanName
-                            this.episode = epNum
-                        }
-                    )
+        val ssMap = mutableMapOf<Int, String>()
+        val dlMap = mutableMapOf<Int, String>()
+
+        allServerButtons.forEachIndexed { idx, btn ->
+            val u = getButtonUrl(btn)
+            if (u.isNotEmpty() && !u.startsWith("#") && !u.startsWith("javascript")) {
+                val num = getEpNumber(btn, idx)
+                if (isServerSS(btn)) {
+                    if (!ssMap.containsKey(num)) ssMap[num] = u
+                } else if (isServerDL(btn)) {
+                    if (!dlMap.containsKey(num)) dlMap[num] = u
                 }
             }
+        }
+
+        val allEpisodeNumbers = (ssMap.keys + dlMap.keys).sorted()
+
+        if (allEpisodeNumbers.isNotEmpty()) {
+            allEpisodeNumbers.forEach { num ->
+                val ssUrl = ssMap[num] ?: ""
+                val dlUrl = dlMap[num] ?: ""
+
+                val episodeData = if (ssUrl.isNotEmpty() && dlUrl.isNotEmpty()) {
+                    "SS_DL_COMBO::ss=$ssUrl||dl=$dlUrl"
+                } else if (ssUrl.isNotEmpty()) {
+                    ssUrl
+                } else {
+                    dlUrl
+                }
+
+                episodes.add(
+                    newEpisode(episodeData) {
+                        this.name = "Tập $num"
+                        this.episode = num
+                    }
+                )
+            }
         } else {
-            // Fallback iframe
-            val iframes = doc.select("article iframe, .film-player iframe")
-            iframes.forEachIndexed { index, iframe ->
-                val src = iframe.attr("src").trim()
-                if (src.isNotEmpty()) {
-                    episodes.add(
-                        newEpisode(src) {
-                            this.name = "Tập ${index + 1}"
-                            this.episode = index + 1
-                        }
-                    )
+            // Fallback (loai tru Server HX)
+            val nonHXButtons = allServerButtons.filter { btn ->
+                val combined = "${btn.text()} ${btn.attr("data-server-name")} ${btn.attr("data-server-label")} ${btn.attr("data-server")}"
+                !combined.contains("HX", ignoreCase = true)
+            }
+
+            if (nonHXButtons.isNotEmpty()) {
+                nonHXButtons.forEachIndexed { index, btn ->
+                    val serverUrl = getButtonUrl(btn)
+                    if (serverUrl.isNotEmpty() && !serverUrl.startsWith("#") && !serverUrl.startsWith("javascript")) {
+                        val epNum = getEpNumber(btn, index)
+                        episodes.add(
+                            newEpisode(serverUrl) {
+                                this.name = "Tập $epNum"
+                                this.episode = epNum
+                            }
+                        )
+                    }
+                }
+            } else {
+                val iframes = doc.select("article iframe, .film-player iframe")
+                iframes.forEachIndexed { index, iframe ->
+                    val src = iframe.attr("src").trim()
+                    if (src.isNotEmpty()) {
+                        episodes.add(
+                            newEpisode(src) {
+                                this.name = "Tập ${index + 1}"
+                                this.episode = index + 1
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -260,14 +315,41 @@ class BLVietsubProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Tự động sử dụng SSPlayExtractor cho luồng video từ máy chủ SSPlay
-        if (data.contains("ssplay.net") || data.contains("blvietsub")) {
+        var hasLinks = false
+
+        if (data.startsWith("SS_DL_COMBO::")) {
+            val payload = data.removePrefix("SS_DL_COMBO::")
+            val ssMatch = Regex("""ss=(.*?)(?:\|\||$)""").find(payload)?.groupValues?.get(1)?.trim() ?: ""
+            val dlMatch = Regex("""dl=(.*?)(?:\|\||$)""").find(payload)?.groupValues?.get(1)?.trim() ?: ""
+
+            // 1. Uu tien so 1: SSPlay 1080p FHD
+            if (ssMatch.isNotEmpty()) {
+                try {
+                    val ssExtractor = SSPlayExtractor()
+                    ssExtractor.getUrl(ssMatch, "$mainUrl/", subtitleCallback) { link ->
+                        hasLinks = true
+                        callback.invoke(link)
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // 2. Du phong so 2: Dailymotion
+            if (dlMatch.isNotEmpty()) {
+                try {
+                    val dlSuccess = loadExtractor(dlMatch, "$mainUrl/", subtitleCallback, callback)
+                    if (dlSuccess) hasLinks = true
+                } catch (_: Exception) {}
+            }
+
+            return hasLinks
+        }
+
+        if (data.contains("ssplay.net") || data.contains("/ss/")) {
             val extractor = SSPlayExtractor()
             extractor.getUrl(data, "$mainUrl/", subtitleCallback, callback)
             return true
         }
 
-        // Tự động sử dụng các Extractor khác đã tích hợp sẵn trong Cloudstream
         return loadExtractor(data, "$mainUrl/", subtitleCallback, callback)
     }
 }
