@@ -33,11 +33,12 @@ class SSPlayExtractor : ExtractorApi() {
 
             // 1. Trich xuat chinh xac theo co che may chu SSPlay: html|{id}|{tag}|...|SU
             if (videoId != null) {
-                val tagMatch = Regex("""html\|${videoId}\|([a-zA-Z0-9_\-]+)\|""").find(response)?.groupValues?.get(1)
-                    ?: Regex("""\|${videoId}\|([a-zA-Z0-9_\-]+)\|[^|]*\|SU""").find(response)?.groupValues?.get(1)
-
-                if (!tagMatch.isNullOrEmpty()) {
-                    val streamUrl = "https://ssplay.net/SU/$tagMatch/$videoId.html"
+                val marker = "html|$videoId|"
+                val pos = response.indexOf(marker)
+                if (pos != -1) {
+                    val tag = response.substring(pos + marker.length).substringBefore("|").trim()
+                    if (tag.isNotEmpty()) {
+                        val streamUrl = "https://ssplay.net/SU/$tag/$videoId.html"
                     callback.invoke(
                         newExtractorLink(
                             source = name,
