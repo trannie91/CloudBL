@@ -258,31 +258,27 @@ class BLVietsubProvider : MainAPI() {
                 "Referer" to "https://www.dailymotion.com/"
             )).text
 
-            val autoIndex = responseText.indexOf(""qualities":")
-            if (autoIndex != -1) {
-                val sub = responseText.substring(autoIndex)
-                val urlKey = ""url":""
-                val urlStart = sub.indexOf(urlKey)
-                if (urlStart != -1) {
-                    val firstQuote = urlStart + urlKey.length
-                    val secondQuote = sub.indexOf('"', firstQuote)
-                    if (secondQuote != -1) {
-                        val rawUrl = sub.substring(firstQuote, secondQuote)
-                        val streamUrl = rawUrl.replace("\", "")
+            val domain = "cdndirector.dailymotion.com"
+            val pos = responseText.indexOf(domain)
+            if (pos != -1) {
+                val urlStart = responseText.lastIndexOf("http", pos)
+                val urlEnd = responseText.indexOf('"', pos)
+                if (urlStart != -1 && urlEnd != -1) {
+                    val rawUrl = responseText.substring(urlStart, urlEnd)
+                    val streamUrl = rawUrl.replace("\", "")
 
-                        callback.invoke(
-                            newExtractorLink(
-                                source = "Dailymotion",
-                                name = "Dailymotion - 1080p FHD",
-                                url = streamUrl,
-                                type = ExtractorLinkType.M3U8
-                            ) {
-                                this.referer = "https://www.dailymotion.com/"
-                                this.quality = Qualities.P1080.value
-                            }
-                        )
-                        return true
-                    }
+                    callback.invoke(
+                        newExtractorLink(
+                            source = "Dailymotion",
+                            name = "Dailymotion - 1080p FHD",
+                            url = streamUrl,
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.referer = "https://www.dailymotion.com/"
+                            this.quality = Qualities.P1080.value
+                        }
+                    )
+                    return true
                 }
             }
         } catch (_: Exception) {}
