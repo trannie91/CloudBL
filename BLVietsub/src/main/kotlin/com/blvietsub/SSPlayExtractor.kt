@@ -82,6 +82,6 @@ class SSPlayExtractor : ExtractorApi() {
                     }
                 )
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {}
     }
 }
