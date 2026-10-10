@@ -31,7 +31,7 @@ class SSPlayExtractor : ExtractorApi() {
         try {
             val response = app.get(url, headers = headers).text
 
-            fun emitLink(linkUrl: String, qualityLabel: String = "1080p FHD") {
+            suspend fun emitLink(linkUrl: String, qualityLabel: String = "1080p FHD") {
                 val streamUrl = if (linkUrl.startsWith("http")) linkUrl else "https://ssplay.net$linkUrl"
                 callback.invoke(
                     newExtractorLink(
